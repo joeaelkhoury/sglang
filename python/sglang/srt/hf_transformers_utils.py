@@ -1,5 +1,6 @@
 """Utilities for Huggingface Transformers."""
 
+import filelock
 import json
 import os
 import warnings

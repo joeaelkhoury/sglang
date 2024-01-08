@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import torch
+from sglang.srt.managers.router.lora_manager import LoRAManager
+from sglang.srt.model_config import LoRAConfig
 from sglang.srt.managers.router.infer_batch import Batch, ForwardMode
 from sglang.srt.memory_pool import ReqToTokenPool, TokenToKVPool
 from sglang.srt.utils import is_multimodal_model
@@ -196,6 +198,7 @@ class ModelRunner:
         load_format="auto",
         trust_remote_code=True,
         model_mode: List[str] = (),
+        lora_paths: Optional[List[str]] = None,
     ):
         self.model_config = model_config
         self.mem_fraction_static = mem_fraction_static
@@ -205,6 +208,7 @@ class ModelRunner:
         self.load_format = load_format
         self.trust_remote_code = trust_remote_code
         self.model_mode = model_mode
+        self.lora_paths = lora_paths
 
         global global_model_mode
         global_model_mode = model_mode
@@ -279,6 +283,16 @@ class ModelRunner:
                 revision=None,
             )
         self.model = model
+        print(f"model {self.model_config.path} loaded.")
+
+        if self.lora_paths:
+            self.model.lora = LoRAManager(self.lora_paths)
+        print(f"lora manager ready.")
+
+
+    def add_loras(self, loras: List[str]):
+        self.model.lora.add_loras(loras)
+
 
     def profile_max_num_token(self, total_gpu_memory):
         available_gpu_memory = get_available_gpu_memory(

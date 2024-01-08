@@ -1,7 +1,9 @@
 """Common utilities."""
 
 import base64
+import filelock
 import json
+import os
 import threading
 import urllib.request
 from io import BytesIO
@@ -177,3 +179,10 @@ def run_with_timeout(func, args=(), kwargs=None, timeout=None):
         raise RuntimeError()
 
     return ret_value[0]
+
+
+def get_lock(path: str, cache_dir: str = None):
+    lock_dir = cache_dir if cache_dir is not None else "/tmp"
+    lock_file_name = path.replace("/", "-") + ".lock"
+    lock = filelock.FileLock(os.path.join(lock_dir, lock_file_name))
+    return lock
