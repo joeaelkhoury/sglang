@@ -56,7 +56,7 @@ class LlamaMLP(nn.Module):
             )
         self.act_fn = SiluAndMul()
 
-    def forward(self, x):
+    def forward(self, x, input_metadata):
         gate_up, _ = self.gate_up_proj(x)
         x = self.act_fn(gate_up)
         x, _ = self.down_proj(x)
@@ -154,6 +154,7 @@ class LlamaDecoderLayer(nn.Module):
         rope_theta = getattr(config, "rope_theta", 10000)
         rope_scaling = getattr(config, "rope_scaling", None)
         max_position_embeddings = getattr(config, "max_position_embeddings", 8192)
+
         self.self_attn = LlamaAttention(
             hidden_size=self.hidden_size,
             num_heads=config.num_attention_heads,
@@ -188,6 +189,7 @@ class LlamaDecoderLayer(nn.Module):
             hidden_states = self.input_layernorm(hidden_states)
         else:
             hidden_states, residual = self.input_layernorm(hidden_states, residual)
+
         hidden_states = self.self_attn(
             positions=positions,
             hidden_states=hidden_states,
@@ -196,7 +198,9 @@ class LlamaDecoderLayer(nn.Module):
 
         # Fully Connected
         hidden_states, residual = self.post_attention_layernorm(hidden_states, residual)
-        hidden_states = self.mlp(hidden_states)
+
+        hidden_states = self.mlp(hidden_states, input_metadata=input_metadata)
+
         return hidden_states, residual
 
 
@@ -314,3 +318,33 @@ class LlamaForCausalLM(nn.Module):
                 param = params_dict[name]
                 weight_loader = getattr(param, "weight_loader", default_weight_loader)
                 weight_loader(param, loaded_weight)
+
+    def get_lora_modules(self, config):
+        params_mapping = {
+            "q_proj": "qkv_proj",
+            "k_proj": "qkv_proj",
+            "v_proj": "qkv_proj",
+            "gate_proj": "gate_up_proj",
+            "up_proj": "gate_up_proj",
+        }
+        modules_dict = dict(self.named_modules())
+        names = []
+        modules = []
+        for parent_name, parent_module in modules_dict.items():
+            for module_name, module in parent_module.named_children():
+                flag = False
+                for submodule_name, _ in module.named_children():
+                    for target_module in config.target_modules:
+                        if target_module in params_mapping:
+                            target_module = params_mapping[target_module]
+                        if submodule_name.endswith(target_module):
+                            names.append(module_name)
+                            modules.append((parent_module, module_name, module))
+                            flag = True
+                            break
+                    if flag: break
+        # print(names)
+        # print(len(modules))
+        # print(modules)
+        return modules
+ 

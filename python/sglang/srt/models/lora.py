@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import safetensors.torch
 import torch
 from sglang.srt.managers.router.infer_batch import ForwardMode
+from sglang.srt.managers.router.model_runner import InputMetadata
 from torch import nn
 from vllm.model_executor.layers.linear import LinearMethodBase
 from vllm.model_executor.weight_utils import (
@@ -14,87 +15,46 @@ from vllm.model_executor.weight_utils import (
 
 
 class LoRAAttention(nn.Module):
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
-        for name in ["q_proj", "k_proj", "v_proj", "o_proj"]:
-            setattr(self, name, LoRALinear())
+        # self.lora_weights_cpu
+
+    def load_adapters_to_gpu(self, lora_ids, mem_pool):
+        # move self.lora_weights_cpu[lora_ids] to mem_pool
+        # return address
+        pass
+
+    def forward(
+        self,
+        positions: torch.Tensor,
+        hidden_states: torch.Tensor,
+        input_metadata: InputMetadata,
+    ) -> torch.Tensor:
+        qkv, _ = self.qkv_proj(hidden_states)
+        q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
+
+        # get lora related things from input_metadata
+        # apply lora
+
+        q, k = self.rotary_emb(positions, q, k)
+        attn_output = self.attn(q, k, v, input_metadata)
+        output, _ = self.o_proj(attn_output)
+        return output
+
+
 
 
 class LoRAMLP(nn.Module):
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
+    def forward(self, x, input_metadata):
 
-class LoRALayer(nn.Module):
-    def __init__(
-        self,
-        layer_id,
-    ) -> None:
-        super().__init__()
-        self.layer_id = layer_id
-        self.self_attn = LoRAAttention()
-        self.mlp = LoRAMLP()
-        # self.q_lora_A = None
-        # self.q_lora_B = None
-        # self.k_lora_A = None
-        # self.k_lora_B = None
-        # self.v_lora_A = None
-        # self.v_lora_B = None
+        # get lora related things from input_metadata
+        # apply lora
 
-        # self.down_proj_lora_A = None
-        # self.down_proj_lora_B = None
-        # self.up_proj_lora_A = None
-        # self.up_proj_lora_B = None
-        # self.gate_proj_lora_A = None
-        # self.gate_proj_lora_B = None
-
-
-class LoRAModel(nn.Module):
-    def __init__(
-        self,
-        config,
-        base_config,
-    ) -> None:
-        super().__init__()
-        self.config = config
-        self.base_config = base_config
-
-        self.input_embed = None
-        self.output_embed = None
-        self.lm_head_lora_embed_A = None
-        self.lm_head_lora_embed_B = None
-
-        self.layers = nn.ModuleList([
-            LoRALayer(i)
-            for i in range(base_config.num_hidden_layers)
-        ])
-
-    def load_weights(
-        self,
-        model_name_or_path: str,
-        device: str,
-        cache_dir: Optional[str] = None,
-        load_format: str = "auto",
-        revision: Optional[str] = None,
- 
-    ):
-        params_dict = dict(self.named_parameters())
-        print(params_dict)
-        # for name, loaded_weight in hf_model_weights_iterator(
-        #     model_name_or_path, cache_dir, load_format, revision
-        # ):
-        #     param = params_dict[name]
-        #     weight_loader = getattr(param, "weight_loader", default_weight_loader)
-        #     weight_loader(param, loaded_weight)
-        #     loaded_weight.to(device)
-        pass
-
-
-class LoRABatch:
-    def __init__() -> None:
-        pass
+        gate_up, _ = self.gate_up_proj(x)
+        x = self.act_fn(gate_up)
+        x, _ = self.down_proj(x)
+        return x

@@ -37,7 +37,7 @@ class LoRAConfig:
     ) -> None:
         self.path = path
         self.config = self.get_lora_config()
-        print(self.config)
+        self.target_modules = self.config["target_modules"]
 
     def get_lora_config(self, dummy=False):
         if dummy:

@@ -4,8 +4,6 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-from sglang.srt.managers.router.lora_manager import LoRAManager
-from sglang.srt.model_config import LoRAConfig
 from sglang.srt.managers.router.infer_batch import Batch, ForwardMode
 from sglang.srt.memory_pool import ReqToTokenPool, TokenToKVPool
 from sglang.srt.utils import is_multimodal_model
@@ -237,6 +235,8 @@ class ModelRunner:
 
     def load_model(self):
         """See also vllm/model_executor/model_loader.py::get_model"""
+        from sglang.srt.managers.router.lora_manager import LoRAManager
+        from sglang.srt.model_config import LoRAConfig
         from sglang.srt.models.llama2 import LlamaForCausalLM
         from sglang.srt.models.llava import LlavaLlamaForCausalLM
         from sglang.srt.models.mixtral import MixtralForCausalLM
