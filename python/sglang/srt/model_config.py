@@ -36,21 +36,24 @@ class LoRAConfig:
         path: str,
     ) -> None:
         self.path = path
-        self.config = self.get_lora_config(self.path)
+        self.config = self.get_lora_config()
+        print(self.config)
 
-    def get_lora_config(self, path, dummy=False):
+    def get_lora_config(self, dummy=False):
         if dummy:
             raise NotImplementedError()
         else:
             from sglang.utils import get_lock
 
-            is_local = os.path.isdir(path)
+            is_local = os.path.isdir(self.path)
             if not is_local:
                 # Use file lock to prevent multiple processes from
                 # downloading the same model weights at the same time.
-                with get_lock(path=path):
-                    weights_dir = snapshot_download(path,
+                with get_lock(path=self.path):
+                    weights_dir = snapshot_download(self.path,
                                                     allow_patterns=["*.bin", "*.json"])
+            else:
+                weights_dir = self.path
             config_name = "adapter_config.json"
             with open(os.path.join(weights_dir, config_name), "r") as f:
-                return json.load(f), weights_dir
+                return json.load(f)

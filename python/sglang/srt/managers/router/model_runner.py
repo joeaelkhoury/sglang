@@ -286,7 +286,8 @@ class ModelRunner:
         print(f"model {self.model_config.path} loaded.")
 
         if self.lora_paths:
-            self.model.lora = LoRAManager(self.lora_paths)
+            self.model.lora = LoRAManager(self.model, self.lora_paths,
+		                          base_config=self.model_config.hf_config, device="cpu")
         print(f"lora manager ready.")
 
 

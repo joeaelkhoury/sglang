@@ -119,5 +119,5 @@ def test_generate(model_path, lora_paths, tp_size):
 
 if __name__ == "__main__":
     test_generate("meta-llama/Llama-2-7b-hf",
-                  # ["yard1/llama-2-7b-sql-lora-test", "lvkaokao/llama2-7b-hf-instruction-lora"], 1)
-                  ["tloen/alpaca-lora-7b"], 1)
+                  ["yard1/llama-2-7b-sql-lora-test", "lvkaokao/llama2-7b-hf-instruction-lora"], 1)
+                  # ["tloen/alpaca-lora-7b"], 1)
